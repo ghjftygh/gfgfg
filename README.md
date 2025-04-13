@@ -1,9 +1,42 @@
+#Создай собственный Шутер!
 from pygame import *
+from random import randint
 
+# Инициализация Pygame
+init()
+
+# Определяем размеры окна
+win_width = 700
+win_height = 500
+
+# Подгружаем шрифты
+font.init()
+font1 = font.Font(None, 80)
+win_text = font1.render('YOU WIN!', True, (255, 255, 255))
+lose_text = font1.render('YOU LOSE!', True, (180, 0, 0))
+
+font2 = font.Font(None, 36)
+mixer.init()
+mixer.music.load('space2.ogg')
+mixer.music.play(-1)  # Зацикливаем музыку
+fire_sound = mixer.Sound('fire2.ogg')
+fire_sound.set_volume(0.1)
+
+# Нам нужны такие картинки:
+img_back = "galaxy1.jpg"  # фон игры
+img_bullet = "bullet.png"  # пуля
+img_hero = "rocket2.png"  # ракета
+img_enemy = "ufo.png"  # враг
+score = 0  # сбито кораблей
+goal = 30  # столько кораблей нужно сбить для победы
+lost = 0  # пропущено кораблей
+max_lost = 5  # проиграли, если пропустили столько
+
+# Класс-родитель для других спрайтов
 class GameSprite(sprite.Sprite):
-    def __init__(self, player_image, player_x, player_y,player_speed):
-        super() .__init__()
-        self.image = transform.scale(image.load(player_image), (55, 55))
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+        sprite.Sprite.__init__(self)
+        self.image = transform.scale(image.load(player_image), (size_x, size_y))
         self.speed = player_speed
         self.rect = self.image.get_rect()
         self.rect.x = player_x
@@ -13,106 +46,146 @@ class GameSprite(sprite.Sprite):
         window.blit(self.image, (self.rect.x, self.rect.y))
 
 class Player(GameSprite):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
+        super().__init__(player_image, player_x, player_y, size_x, size_y, player_speed)
+        self.health = 3  # Начальное количество здоровья
+
+    def draw_health(self, surface):
+        for i in range(self.health):
+            draw.rect(surface, (255, 0, 0), (10 + i * 30, 10, 25, 5))
+
     def update(self):
         keys = key.get_pressed()
         if keys[K_LEFT] and self.rect.x > 5:
             self.rect.x -= self.speed
         if keys[K_RIGHT] and self.rect.x < win_width - 80:
             self.rect.x += self.speed
-        if keys[K_UP] and self.rect.y > 5:
-            self.rect.y -= self.speed
-        if keys[K_DOWN] and self.rect.y < win_height - 80:
-            self.rect.y += self.speed
-        if keys[K_UP] and self.rect.y > 5:
-            self.rect.y -= self.speed
-        if keys[K_DOWN] and self.rect.y <win_height -80:
-            self.rect.y += self.speed
+
+    def fire(self):
+        bullet = Bullet(img_bullet, self.rect.centerx, self.rect.top, 15, 20, -15)
+        bullets.add(bullet)
 
 class Enemy(GameSprite):
     def update(self):
-        if self.rect.x <= 470:
-            self.side = "right"
-        if self.rect.x >= win_width - 85:
-            self.side == "left"
-        if self.side == "left"
-            self.rect.x -= self.speed
-        else:
+        self.rect.y += self.speed
+        global lost
+        if self.rect.y > win_height:
             self.rect.x += self.speed
+#метод "выстрел"(используем место игрока, чтобы создать там пулю)
+    def fire(self):
+        bullet = Bullet(img_bullet, self.rect.centerx, self.rect.top, 15, 20, -15)
+        bullets.add(bullet)
+#класс спрайта-врага
+class Enemy(GameSprite):
+#движение врага
+    def update(self):
+        self.rect.y += self.speed
+        global lost
+#исчезает, если дойдёт до края экрана
+        if self.rect.y > win_height:
+            self.rect.x = randint(80, win_width - 80)
+            self.rect.y = 0
+            lost = lost + 1
 
-class Wall(sprite.Sprite):
-    def __init__(self, color_1, color_2, color_3, wall_x, wall_y, wall_width, wall_height):
-        super() .__init__()
-        self.color_1 = color_1
-        self.color_2 = color_2
-        self.color_3 = color_3
-        self.width = wall_widht
-        self.height = wall_height
+#класс спрайта-пули
+class Bullet(GameSprite):
+# движение врага
+    def update(self):
+        self.rect.y += self.speed
+# исчезает, если дойдет до края экрана
+        if self.rect.y < 0:
+            self.kill()
 
-        self.image = Surface((self.width, self.height))
-        self.image.fill((color_1, color_2, color_3))
-
-        self.rect = self.image.get_rect()
-        self.rect.x = wall_x
-        self.rect.y = wall_y
-    def draw_wall(self):
-        window.blit(self.image, (self.rect.x, self.rect.y))
-
+#создаём окошко
 win_width = 700
 win_height = 500
+display.set_caption("Shooter")
 window = display.set_mode((win_width, win_height))
-display.set_caption("Maze")
-background = transform.scale(image.load(background.jpg), (win_width, win_height))
-
-player = Player('hero.png', 5, win_height - 80, 4)
-monster = Enemy('cyborg.png', win_width - 80, 280, 2)
-final = GameSprite('treasure.png', win_width - 120, win_height - 80, 0)
-
-w1 = Wall(154, 205, 50, 100, 20, 450, 10)
-w2 = Wall(154, 205, 50, 100, 480, 350, 10)
-w3 = Wall(154, 205, 50, 100, 20, 10, 380)
-
-game = True
+background = transform.scale(image.load(img_back),(win_width, win_height) )
+#создаём спрайты
+ship = Player(img_hero, 5, win_height - 100, 80, 100, 10)
+#создание группы спрайтов-врагов
+monsters = sprite.Group()
+for i in range(1, 6):
+    monster = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5) )
+    monsters.add(monster)
+bullets = sprite.Group()
+#переменная "игра закончилась": как только там True, в основном цикле перестают работать спрайты
 finish = False
-clock = time.Clock()
-FPS = 60
-
-font.init()
-font = font.Font(None, 70)
-win = font.render('YOU WIN!', True, (255, 215, 0))
-lose = font.render('YOU LOSE!', True, (180, 0, 0))
-
-mixer.init()
-mixer.music.load('jungles.ogg')
-mixer.music.play()
-
-money = mixer.Sound('money.ogg')
-kick = mixer.Sound('kick.ogg')
-
-while game:
+#основной цикл игры:
+run = True #флаг сбрасывается кнопкой закрытия окна
+# Основной цикл игры:
+while run:
+    # Событие нажатия на кнопку Закрыть
     for e in event.get():
-        if e.type == False
+        if e.type == QUIT:
+            run = False
+        # Событие нажатия на пробел - спрайт стреляет
+        elif e.type == KEYDOWN:
+            if e.key == K_SPACE:
+                fire_sound.play()
+                ship.fire()
 
-    if finish != True:
+    # Сама игра: действия спрайтов, проверка правил игры, перерисовка
+    if not finish:
+        # Обновляем фон
         window.blit(background, (0, 0))
-        player.update()
-        monster.update()
 
-        player.reset()
-        monster.reset()
-        final.reset()
+        # Производим движения спрайтов
+        ship.update()
+        monsters.update()
+        bullets.update()
 
-        w1.draw_wall()
-        w2.draw_wall()
-        w3.draw_wall()
+        # Обновляем их в новом местоположении при каждой итерации цикла
+        ship.reset()
+        monsters.draw(window)
+        bullets.draw(window)
 
-if sprite.collide_rect(player, monster) or sprite.collide_rect(player, wl) or sprite.collide_rect(player, w2) or sprite.collide_rect(player, w3):
-        finish = True
-        window.blit(lose, (200, 200))
-        kick.play()
+        # Проверка столкновения пули и монстров (и монстр, и пуля при касании исчезают)
+        collides = sprite.groupcollide(monsters, bullets, True, True)
+        for c in collides:
+            score += 1
+            monster = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
+            monsters.add(monster)
 
-    if sprite.collide_rect(player, final):
-        finish = True
-        window.blit(win, (200, 200))
-        money.play()
-display.update()
-clock.tick(FPS)
+        # Проверка столкновения игрока с врагами
+        if sprite.spritecollide(ship, monsters, False):
+            ship.health -= 1  # Уменьшаем здоровье на 1
+            if ship.health <= 0:  # Если здоровье равно 0, игра окончена
+                finish = True
+                window.blit(lose_text, (200, 200))
+
+        # Проверка выигрыша: сколько очков набрали?
+        if score > goal:
+            finish = True
+            window.blit(win_text, (200, 200))
+
+        # Пишем текст на экране
+        text = font2.render("Score: " + str(score), 1, (255, 255, 255))
+        window.blit(text, (10, 20))
+
+        text_lose = font2.render("Missed: " + str(lost), 1, (255, 255, 255))
+        window.blit(text_lose, (10, 50))
+
+        # Отображаем здоровье
+        ship.draw_health(window)
+
+        display.update()
+
+    # Автоматический перезапуск игры
+    else:
+        finish = False
+        score = 0
+        lost = 0
+        ship.health = 3  # Сброс здоровья игрока
+        for b in bullets:
+            b.kill()
+        for m in monsters:
+            m.kill()
+
+        time.delay(3000)
+        for i in range(1, 6):
+            monster = Enemy(img_enemy, randint(80, win_width - 80), -40, 80, 50, randint(1, 5))
+            monsters.add(monster)
+
+    time.delay(50)
